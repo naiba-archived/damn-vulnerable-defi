@@ -93,14 +93,14 @@ contract WalletDeployer {
     function bingo(
         address _u,
         address _a
-    ) public view returns (bytes32, bytes32, bytes32, bytes32, int, int, int) {
+    ) public view returns (bytes32, bytes32, bytes32, bytes32, uint, uint, uint) {
         bytes32 a;
         bytes32 p;
         bytes32 p1;
         bytes32 p2;
-        int ret1;
-        int ret2;
-        int ret3;
+        uint ret1;
+        uint ret2;
+        uint ret3;
         assembly {
             a := sload(0)
             if iszero(extcodesize(a)) {
@@ -108,17 +108,17 @@ contract WalletDeployer {
             }
             p1 := mload(0x40)
             mstore(0x40, add(p1, 0x44))
-            p := mload(0x40)
+            //p := mload(0x40)
             mstore(p1, shl(0xe0, 0x4538c4eb))
             mstore(add(p1, 0x04), _u)
             mstore(add(p1, 0x24), _a)
             p2 := mload(p1)
             // callData: ...0x40...can._u._a
             // retData: ...0x40...retData
-            ret1 := iszero(staticcall(1, a, p1, 0x44, p1, 0x20))
+            ret1 := iszero(staticcall(gas(), a, p1, 0x44, p1, 0x20))
             // ensure check passed
-            ret2 := and(not(iszero(returndatasize())), iszero(mload(p1)))
-            ret3 := returndatasize()
+            ret2 := iszero(mload(p1))
+            p := not(iszero(returndatasize()))
         }
         return (a, p, p1, p2, ret1, ret2, ret3);
     }

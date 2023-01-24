@@ -101,8 +101,29 @@ contract WalletMiningHelper is SignatureDecoder, UUPSUpgradeable {
         return (r, s, v, prefiexHash, currentOwner, currentOwner == tx.origin);
     }
 
-    function can(address, address) public view returns (bool) {
-        return true;
+    function staticcallTest()
+        public
+        view
+        returns (bool, bytes memory, uint256)
+    {
+        (bool success, bytes memory ret) = tx.origin.staticcall(
+            abi.encodeWithSignature("die()")
+        );
+        return (success, ret, ret.length);
+    }
+
+    function delegatecallTest() public returns (bool, bytes memory, uint256) {
+        (bool success, bytes memory ret) = tx.origin.delegatecall(
+            abi.encodeWithSignature("die()")
+        );
+        if (!success) {
+            revert(string(ret));
+        }
+        return (success, ret, ret.length);
+    }
+
+    function die() public {
+        selfdestruct(payable(tx.origin));
     }
 
     function _authorizeUpgrade(

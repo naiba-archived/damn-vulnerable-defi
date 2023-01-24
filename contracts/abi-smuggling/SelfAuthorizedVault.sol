@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "solady/src/utils/SafeTransferLib.sol";
 import "./AuthorizedExecutor.sol";
+import "hardhat/console.sol";
 
 /**
  * @title SelfAuthorizedVault
@@ -48,6 +49,7 @@ contract SelfAuthorizedVault is AuthorizedExecutor {
     }
 
     function sweepFunds(address receiver, IERC20 token) external onlyThis {
+        console.log("Sweeping funds", receiver, token.balanceOf(address(this)));
         SafeTransferLib.safeTransfer(address(token), receiver, token.balanceOf(address(this)));
     }
 

@@ -45,6 +45,16 @@ describe('[Challenge] Unstoppable', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        var totalSupply = await vault.totalSupply();
+        console.log("totalSupply", totalSupply);
+        console.log("totalAssets", await vault.totalAssets());
+        console.log("convertToShares(totalSupply)", await vault.convertToShares(totalSupply));
+        // totalSupply 没增加，但是 totalAssets 增加了
+        await token.transfer(vault.address, 100n * 10n ** 18n);
+        totalSupply = await vault.totalSupply();
+        console.log("totalSupply", totalSupply);
+        console.log("totalAssets", await vault.totalAssets());
+        console.log("convertToShares(totalSupply)", await vault.convertToShares(totalSupply));
     });
 
     after(async function () {
